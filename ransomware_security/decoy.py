@@ -41,7 +41,6 @@ def create_decoy():
             original_hashes[file_path] = file_hash
             print("미끼 파일 생성 완료", file_path)
 
-
 class DecoyHandler(FileSystemEventHandler):
     def on_modified(self, event):
         # 파일이 아닌 디렉토리면 걍 함수 끝내고
@@ -54,17 +53,19 @@ class DecoyHandler(FileSystemEventHandler):
             with open(event.src_path, "rb") as f:
                 # 변조된 미끼파일 해시
                 current_hash = hashlib.sha256(f.read()).hexdigest()
-
-            
+        
             # 변조된 미끼파일 해시와 원본 해시 비교
             if current_hash != original_hashes.get(os.path.abspath(event.src_path)):
                 print("해시 값이 변조됨")
-                observer.stop()
 
     def on_deleted(self, event):
         if not event.is_directory and os.path.abspath(event.src_path) in original_hashes:
             print("미끼 파일 삭제됨: ",event.src_path)
-            observer.stop()
+
+    def on_moved(self, event):
+        if not event.is_directory:
+            if os.path.abspath(event.src_path) in original_hashes:
+                print("미끼 파일 이름 변경: ", event.src_path, "→", event.dest_path)
 
 if __name__ == "__main__":
     create_decoy()
@@ -80,8 +81,7 @@ if __name__ == "__main__":
         # recursive=False 하위 디렉토리 탐지X
         observer.schedule(event_handler, path, recursive=False) 
 
-    print("랜섬웨어 탐지 시작 (Ctrl+C 또는 감지 시 종료)\n")
-    
+    print("랜섬웨어 탐지 시작 (Ctrl+C 종료)\n")
     observer.start()
     
     try:
